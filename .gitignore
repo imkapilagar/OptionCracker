@@ -1,0 +1,42 @@
+# Zerodha API Credentials - NEVER commit these!
+config.py
+zerodha_credentials.txt
+upstox_credentials.txt
+*.token
+*.key
+
+# API Keys and Secrets
+.env
+.env.local
+
+# Output files - keep HTML but ignore CSV
+*.csv
+output/*.csv
+!output/*.html
+!index.html
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
