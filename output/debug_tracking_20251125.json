@@ -1,25 +1,94 @@
 {
   "thread_1": {
-    "timeframe": "10:00-11:00",
-    "start_time": "10:00",
-    "end_time": "11:00",
-    "status": "active",
-    "last_update": "11:23:41",
+    "timeframe": "09:30-10:30",
+    "start_time": "09:30",
+    "end_time": "10:30",
+    "status": "waiting",
+    "last_update": "14:07:34",
     "ce_strike": {
-      "strike": 25900,
-      "low": 59.65,
-      "ltp": 64.75,
-      "distance": 9.649999999999999,
+      "strike": 25950,
+      "low": 51.0,
+      "ltp": 78.3,
+      "distance": 1.0,
       "samples": 1,
-      "last_update": "11:23:41"
+      "last_update": "14:07:34"
     },
     "pe_strike": {
       "strike": 26050,
       "low": 59.4,
-      "ltp": 122.85,
+      "ltp": 40.4,
       "distance": 9.399999999999999,
       "samples": 1,
-      "last_update": "11:23:41"
+      "last_update": "14:07:34"
+    }
+  },
+  "thread_2": {
+    "timeframe": "10:00-11:00",
+    "start_time": "10:00",
+    "end_time": "11:00",
+    "status": "waiting",
+    "last_update": "14:07:35",
+    "ce_strike": {
+      "strike": 25950,
+      "low": 38.6,
+      "ltp": 78.3,
+      "distance": 11.399999999999999,
+      "samples": 1,
+      "last_update": "14:07:35"
+    },
+    "pe_strike": {
+      "strike": 26050,
+      "low": 59.4,
+      "ltp": 40.4,
+      "distance": 9.399999999999999,
+      "samples": 1,
+      "last_update": "14:07:35"
+    }
+  },
+  "thread_3": {
+    "timeframe": "10:30-11:30",
+    "start_time": "10:30",
+    "end_time": "11:30",
+    "status": "waiting",
+    "last_update": "14:07:36",
+    "ce_strike": {
+      "strike": 25900,
+      "low": 57.05,
+      "ltp": 125.75,
+      "distance": 7.049999999999997,
+      "samples": 1,
+      "last_update": "14:07:36"
+    },
+    "pe_strike": {
+      "strike": 26050,
+      "low": 60.5,
+      "ltp": 40.4,
+      "distance": 10.5,
+      "samples": 1,
+      "last_update": "14:07:36"
+    }
+  },
+  "thread_4": {
+    "timeframe": "11:00-12:00",
+    "start_time": "11:00",
+    "end_time": "12:00",
+    "status": "waiting",
+    "last_update": "14:07:37",
+    "ce_strike": {
+      "strike": 25900,
+      "low": 57.05,
+      "ltp": 125.75,
+      "distance": 7.049999999999997,
+      "samples": 1,
+      "last_update": "14:07:37"
+    },
+    "pe_strike": {
+      "strike": 26000,
+      "low": 40.0,
+      "ltp": 14.3,
+      "distance": 10.0,
+      "samples": 1,
+      "last_update": "14:07:37"
     }
   }
 }

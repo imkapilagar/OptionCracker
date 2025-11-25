@@ -47,8 +47,8 @@ def fetch_timeframe_low(instrument_key, start_time, end_time):
     return None
 
 # Timeframe: 10:00 AM - 11:00 AM
-START_TIME = (10, 0)  # 10:00 AM
-END_TIME = (11, 0)    # 11:00 AM
+START_TIME = (10, 30)  # 10:30 AM
+END_TIME = (11, 30)    # 11:30 AM
 
 # Fetch option chain
 url = 'https://api.upstox.com/v2/option/chain'
