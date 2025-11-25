@@ -1,194 +1,221 @@
-<!DOCTYPE html>
+#!/usr/bin/env python3
+"""
+Generate GitHub Pages compatible dashboard
+Embeds the data directly in HTML (no external JSON file dependencies)
+"""
+import json
+import os
+from datetime import datetime
+
+def create_github_pages_dashboard():
+    """Generate static HTML with embedded data"""
+
+    today = datetime.now().strftime('%Y%m%d')
+
+    # Load current data
+    data_file = f'output/debug_tracking_{today}.json'
+    if not os.path.exists(data_file):
+        data_file = 'output/live_data.json'
+
+    data_dict = {}
+    if os.path.exists(data_file):
+        with open(data_file, 'r') as f:
+            data_dict = json.load(f)
+
+    # Embed data as JavaScript
+    embedded_data = json.dumps(data_dict)
+
+    html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎯 Live ₹50 Target Tracker - NIFTY Options</title>
     <style>
-        * {
+        * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
+        }}
 
-        body {
+        body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
             padding: 20px;
-        }
+        }}
 
-        .container {
+        .container {{
             max-width: 1400px;
             margin: 0 auto;
-        }
+        }}
 
-        .header {
+        .header {{
             text-align: center;
             color: white;
             margin-bottom: 30px;
-        }
+        }}
 
-        .header h1 {
+        .header h1 {{
             font-size: 2.5em;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
+        }}
 
-        .header .subtitle {
+        .header .subtitle {{
             font-size: 1.2em;
             opacity: 0.9;
-        }
+        }}
 
-        .header .time {
+        .header .time {{
             font-size: 1em;
             margin-top: 10px;
             opacity: 0.8;
-        }
+        }}
 
-        .grid {
+        .grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
-        }
+        }}
 
-        .thread-card {
+        .thread-card {{
             background: white;
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
+        }}
 
-        .thread-card.inactive {
+        .thread-card.inactive {{
             opacity: 0.6;
             background: #f5f5f5;
-        }
+        }}
 
-        .thread-header {
+        .thread-header {{
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 2px solid #667eea;
-        }
+        }}
 
-        .thread-name {
+        .thread-name {{
             font-size: 1.5em;
             font-weight: bold;
             color: #667eea;
-        }
+        }}
 
-        .thread-status {
+        .thread-status {{
             padding: 5px 15px;
             border-radius: 20px;
             font-size: 0.9em;
             font-weight: bold;
-        }
+        }}
 
-        .status-active {
+        .status-active {{
             background: #4ade80;
             color: white;
-        }
+        }}
 
-        .status-waiting {
+        .status-waiting {{
             background: #fbbf24;
             color: white;
-        }
+        }}
 
-        .timeframe {
+        .timeframe {{
             color: #666;
             font-size: 1.1em;
             margin-bottom: 15px;
-        }
+        }}
 
-        .option-section {
+        .option-section {{
             margin-bottom: 20px;
-        }
+        }}
 
-        .option-type {
+        .option-type {{
             font-weight: bold;
             font-size: 1.1em;
             margin-bottom: 10px;
             padding: 8px;
             border-radius: 8px;
-        }
+        }}
 
-        .option-type.ce {
+        .option-type.ce {{
             background: #dcfce7;
             color: #166534;
-        }
+        }}
 
-        .option-type.pe {
+        .option-type.pe {{
             background: #fee2e2;
             color: #991b1b;
-        }
+        }}
 
-        .option-details {
+        .option-details {{
             padding: 10px;
             background: #f9fafb;
             border-radius: 8px;
             margin-top: 5px;
-        }
+        }}
 
-        .detail-row {
+        .detail-row {{
             display: flex;
             justify-content: space-between;
             padding: 5px 0;
             font-size: 0.95em;
-        }
+        }}
 
-        .detail-label {
+        .detail-label {{
             color: #666;
-        }
+        }}
 
-        .detail-value {
+        .detail-value {{
             font-weight: bold;
-        }
+        }}
 
-        .strike {
+        .strike {{
             font-size: 1.3em;
             color: #333;
-        }
+        }}
 
-        .low-price {
+        .low-price {{
             font-size: 1.5em;
             color: #dc2626;
-        }
+        }}
 
-        .near-target {
+        .near-target {{
             background: #fef3c7;
             border: 2px solid #f59e0b;
             animation: pulse 2s infinite;
-        }
+        }}
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
+        @keyframes pulse {{
+            0%, 100% {{ opacity: 1; }}
+            50% {{ opacity: 0.8; }}
+        }}
 
-        .no-data {
+        .no-data {{
             text-align: center;
             color: #999;
             font-style: italic;
             padding: 20px;
-        }
+        }}
 
-        .footer {
+        .footer {{
             text-align: center;
             color: white;
             margin-top: 30px;
             padding: 20px;
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
-        }
+        }}
 
-        .update-note {
+        .update-note {{
             font-size: 0.9em;
             opacity: 0.8;
             margin-top: 10px;
-        }
+        }}
     </style>
 </head>
 <body>
@@ -196,7 +223,7 @@
         <div class="header">
             <h1>🎯 Live ₹50 Target Tracker</h1>
             <div class="subtitle">NIFTY Options - Nearest to ₹50 Low</div>
-            <div class="time" id="lastUpdate">Last Updated: November 25, 2025 10:04:24 AM</div>
+            <div class="time" id="lastUpdate">Last Updated: {datetime.now().strftime('%B %d, %Y %I:%M:%S %p')}</div>
         </div>
 
         <div class="grid" id="dashboard">
@@ -214,100 +241,112 @@
 
     <script>
         // Embedded data
-        const liveData = {"thread_1": {"timeframe": "09:30-10:30", "start_time": "09:30", "end_time": "10:30", "status": "active", "samples": 1, "last_update": "09:53:24", "ce_strike": {"strike": 25950, "low": 60.7, "ltp": 60.7, "distance": 10.700000000000003, "samples": 1}, "pe_strike": {"strike": 25950, "low": 41.9, "ltp": 41.9, "distance": 8.100000000000001, "samples": 1}}};
+        const liveData = {embedded_data};
 
         // Timeframe configurations
         const timeframes = [
-            { name: 'Thread 1', timeframe: '09:30-10:30', key: 'thread_1' },
-            { name: 'Thread 2', timeframe: '10:00-11:00', key: 'thread_2' },
-            { name: 'Thread 3', timeframe: '10:30-11:30', key: 'thread_3' },
-            { name: 'Thread 4', timeframe: '11:00-12:00', key: 'thread_4' }
+            {{ name: 'Thread 1', timeframe: '09:30-10:30', key: 'thread_1' }},
+            {{ name: 'Thread 2', timeframe: '10:00-11:00', key: 'thread_2' }},
+            {{ name: 'Thread 3', timeframe: '10:30-11:30', key: 'thread_3' }},
+            {{ name: 'Thread 4', timeframe: '11:00-12:00', key: 'thread_4' }}
         ];
 
-        function renderDashboard() {
+        function renderDashboard() {{
             const dashboard = document.getElementById('dashboard');
             dashboard.innerHTML = '';
 
-            timeframes.forEach(tf => {
+            timeframes.forEach(tf => {{
                 const threadData = liveData[tf.key];
                 const card = document.createElement('div');
 
-                if (threadData) {
+                if (threadData) {{
                     const status = threadData.status === 'active' ? 'active' : 'waiting';
                     const statusLabel = threadData.status === 'active' ? '🔴 LIVE' : 'Waiting';
 
                     card.className = 'thread-card';
                     card.innerHTML = `
                         <div class="thread-header">
-                            <div class="thread-name">${tf.name}</div>
-                            <div class="thread-status status-${status}">${statusLabel}</div>
+                            <div class="thread-name">${{tf.name}}</div>
+                            <div class="thread-status status-${{status}}">${{statusLabel}}</div>
                         </div>
-                        <div class="timeframe">⏰ ${tf.timeframe}</div>
-                        ${renderOption(threadData.ce_strike, 'CE')}
-                        ${renderOption(threadData.pe_strike, 'PE')}
+                        <div class="timeframe">⏰ ${{tf.timeframe}}</div>
+                        ${{renderOption(threadData.ce_strike, 'CE')}}
+                        ${{renderOption(threadData.pe_strike, 'PE')}}
                     `;
-                } else {
+                }} else {{
                     card.className = 'thread-card inactive';
                     card.innerHTML = `
                         <div class="thread-header">
-                            <div class="thread-name">${tf.name}</div>
+                            <div class="thread-name">${{tf.name}}</div>
                             <div class="thread-status status-waiting">Waiting</div>
                         </div>
-                        <div class="timeframe">⏰ ${tf.timeframe}</div>
+                        <div class="timeframe">⏰ ${{tf.timeframe}}</div>
                         <div class="no-data">No data yet...</div>
                     `;
-                }
+                }}
 
                 dashboard.appendChild(card);
-            });
-        }
+            }});
+        }}
 
-        function renderOption(optionData, type) {
+        function renderOption(optionData, type) {{
             const typeClass = type.toLowerCase();
             const typeLabel = type === 'CE' ? '📈 CALL (CE)' : '📉 PUT (PE)';
 
-            if (!optionData) {
+            if (!optionData) {{
                 return `
                     <div class="option-section">
-                        <div class="option-type ${typeClass}">${typeLabel}</div>
+                        <div class="option-type ${{typeClass}}">${{typeLabel}}</div>
                         <div class="no-data">No data yet</div>
                     </div>
                 `;
-            }
+            }}
 
             const nearTarget = optionData.distance <= 15 ? 'near-target' : '';
 
             return `
                 <div class="option-section">
-                    <div class="option-type ${typeClass}">${typeLabel}</div>
-                    <div class="option-details ${nearTarget}">
+                    <div class="option-type ${{typeClass}}">${{typeLabel}}</div>
+                    <div class="option-details ${{nearTarget}}">
                         <div class="detail-row">
                             <span class="detail-label">Strike:</span>
-                            <span class="detail-value strike">${optionData.strike}</span>
+                            <span class="detail-value strike">${{optionData.strike}}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Low:</span>
-                            <span class="detail-value low-price">₹${optionData.low.toFixed(2)}</span>
+                            <span class="detail-value low-price">₹${{optionData.low.toFixed(2)}}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Current LTP:</span>
-                            <span class="detail-value">₹${optionData.ltp.toFixed(2)}</span>
+                            <span class="detail-value">₹${{optionData.ltp.toFixed(2)}}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Distance from ₹50:</span>
-                            <span class="detail-value">₹${optionData.distance.toFixed(2)}</span>
+                            <span class="detail-value">₹${{optionData.distance.toFixed(2)}}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Samples:</span>
-                            <span class="detail-value">${optionData.samples}</span>
+                            <span class="detail-value">${{optionData.samples}}</span>
                         </div>
                     </div>
                 </div>
             `;
-        }
+        }}
 
         // Render on page load
         renderDashboard();
     </script>
 </body>
 </html>
+"""
+
+    # Save as index.html
+    with open('index.html', 'w') as f:
+        f.write(html)
+
+    print(f"✅ GitHub Pages dashboard created: index.html")
+    print(f"📊 Data embedded: {len(data_dict)} threads")
+    return 'index.html'
+
+if __name__ == '__main__':
+    create_github_pages_dashboard()
