@@ -4,22 +4,22 @@
     "start_time": "10:00",
     "end_time": "11:00",
     "status": "active",
-    "last_update": "11:09:48",
+    "last_update": "11:23:41",
     "ce_strike": {
       "strike": 25900,
       "low": 59.65,
-      "ltp": 62.1,
+      "ltp": 64.75,
       "distance": 9.649999999999999,
       "samples": 1,
-      "last_update": "11:09:48"
+      "last_update": "11:23:41"
     },
     "pe_strike": {
       "strike": 26050,
       "low": 59.4,
-      "ltp": 133.65,
+      "ltp": 122.85,
       "distance": 9.399999999999999,
       "samples": 1,
-      "last_update": "11:09:48"
+      "last_update": "11:23:41"
     }
   }
 }
