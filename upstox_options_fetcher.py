@@ -114,17 +114,19 @@ class UpstoxOptionChainFetcher:
             return None
 
     def get_strikes_to_fetch(self, atm_strike, step, option_type):
-        """Get list of strikes from ATM to OTM15"""
-        strikes = [atm_strike]  # ATM
+        """Get list of strikes from ITM5 to OTM15 (21 strikes total)"""
+        strikes = []
 
         if option_type == 'CE':
-            # For CE, OTM is above ATM
-            for i in range(1, 16):
+            # For CE, ITM is below ATM, OTM is above ATM
+            # Include: ITM5, ITM4, ITM3, ITM2, ITM1, ATM, OTM1-OTM15
+            for i in range(-5, 16):
                 strikes.append(atm_strike + (i * step))
         else:  # PE
-            # For PE, OTM is below ATM
-            for i in range(1, 16):
-                strikes.append(atm_strike - (i * step))
+            # For PE, ITM is above ATM, OTM is below ATM
+            # Include: ITM5, ITM4, ITM3, ITM2, ITM1, ATM, OTM1-OTM15
+            for i in range(-15, 6):
+                strikes.append(atm_strike + (i * step))
 
         return strikes
 
@@ -191,7 +193,7 @@ class UpstoxOptionChainFetcher:
         results = []
 
         # Process CE options
-        print("\nFetching CE options...")
+        print("\nFetching CE options (ITM5 to OTM15)...")
         ce_strikes = self.get_strikes_to_fetch(atm_strike, step, 'CE')
 
         for strike in ce_strikes:
@@ -229,7 +231,7 @@ class UpstoxOptionChainFetcher:
             time.sleep(0.1)
 
         # Process PE options
-        print("\nFetching PE options...")
+        print("\nFetching PE options (ITM5 to OTM15)...")
         pe_strikes = self.get_strikes_to_fetch(atm_strike, step, 'PE')
 
         for strike in pe_strikes:

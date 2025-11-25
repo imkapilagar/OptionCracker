@@ -21,7 +21,7 @@ from collections import defaultdict
 # Read credentials
 with open('upstox_credentials.txt', 'r') as f:
     lines = f.readlines()
-    access_token = lines[2].split('=')[1].strip()
+    access_token = lines[1].split('=')[1].strip()
 
 # Global lock for thread-safe operations
 results_lock = threading.Lock()

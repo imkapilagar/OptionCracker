@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIFTY Option Lows - November 24, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .table-container {
+            padding: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid #5568d3;
+        }
+
+        td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        tr:hover {
+            background: #e3e6ff;
+            transition: background 0.2s;
+        }
+
+        .time-col {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .ce-data {
+            background: #d4f4dd;
+        }
+
+        .pe-data {
+            background: #ffe5e5;
+        }
+
+        .strike {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.05em;
+        }
+
+        .low {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .ltp {
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        .distance {
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+
+        .footer {
+            background: #343a40;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.4em;
+            }
+
+            table {
+                font-size: 0.8em;
+            }
+
+            th, td {
+                padding: 8px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 NIFTY Option Lows Report</h1>
+            <p>November 24, 2025 | Strikes Nearest to ₹50</p>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">Time Period<br><span style="font-size:0.85em">(60 min lookback)</span></th>
+                        <th colspan="3" style="background: #11998e;">CALL (CE)</th>
+                        <th colspan="3" style="background: #ee0979;">PUT (PE)</th>
+                    </tr>
+                    <tr>
+                        <th style="background: #0e8070;">Strike | Low | LTP</th>
+                        <th style="background: #0e8070;">Distance</th>
+                        <th style="background: #0e8070;">Samples</th>
+                        <th style="background: #d6086b;">Strike | Low | LTP</th>
+                        <th style="background: #d6086b;">Distance</th>
+                        <th style="background: #d6086b;">Samples</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td class="time-col">09:30 - 10:30</td>
+                        <td class="ce-data">
+                            <span class="strike">26200</span><br>
+                            <span class="low">₹48.75</span> | <span class="ltp">₹52.30</span>
+                        </td>
+                        <td class="ce-data distance">₹1.25</td>
+                        <td class="ce-data">120</td>
+                        <td class="pe-data">
+                            <span class="strike">26050</span><br>
+                            <span class="low">₹51.20</span> | <span class="ltp">₹58.40</span>
+                        </td>
+                        <td class="pe-data distance">₹1.20</td>
+                        <td class="pe-data">120</td>
+                    </tr>
+
+                    <tr>
+                        <td class="time-col">10:00 - 11:00</td>
+                        <td class="ce-data">
+                            <span class="strike">26150</span><br>
+                            <span class="low">₹47.90</span> | <span class="ltp">₹49.60</span>
+                        </td>
+                        <td class="ce-data distance">₹2.10</td>
+                        <td class="ce-data">120</td>
+                        <td class="pe-data">
+                            <span class="strike">26100</span><br>
+                            <span class="low">₹52.40</span> | <span class="ltp">₹61.75</span>
+                        </td>
+                        <td class="pe-data distance">₹2.40</td>
+                        <td class="pe-data">120</td>
+                    </tr>
+
+                    <tr>
+                        <td class="time-col">10:30 - 11:30</td>
+                        <td class="ce-data">
+                            <span class="strike">26150</span><br>
+                            <span class="low">₹45.50</span> | <span class="ltp">₹47.45</span>
+                        </td>
+                        <td class="ce-data distance">₹4.50</td>
+                        <td class="ce-data">120</td>
+                        <td class="pe-data">
+                            <span class="strike">26100</span><br>
+                            <span class="low">₹53.90</span> | <span class="ltp">₹74.25</span>
+                        </td>
+                        <td class="pe-data distance">₹3.90</td>
+                        <td class="pe-data">120</td>
+                    </tr>
+
+                    <tr>
+                        <td class="time-col">11:00 - 12:00</td>
+                        <td class="ce-data">
+                            <span class="strike">26100</span><br>
+                            <span class="low">₹46.20</span> | <span class="ltp">₹50.85</span>
+                        </td>
+                        <td class="ce-data distance">₹3.80</td>
+                        <td class="ce-data">120</td>
+                        <td class="pe-data">
+                            <span class="strike">26050</span><br>
+                            <span class="low">₹48.60</span> | <span class="ltp">₹67.30</span>
+                        </td>
+                        <td class="pe-data distance">₹1.40</td>
+                        <td class="pe-data">120</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            Generated on November 24, 2025 at 03:12 PM<br>
+            Data tracked every 30 seconds with 60-minute lookback periods
+        </div>
+    </div>
+</body>
+</html>

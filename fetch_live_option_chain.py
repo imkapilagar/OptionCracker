@@ -74,18 +74,19 @@ def fetch_live_option_chain(access_token, symbol='NIFTY', expiry_date='2025-11-2
     print(f"   ATM Strike: {atm_strike}")
     print(f"   Total Strikes Available: {len(chain_data)}")
 
-    # Filter for ATM to OTM15 (16 strikes each side)
-    atm_to_otm15_ce = []
-    atm_to_otm15_pe = []
+    # Filter for ITM5 to OTM15 (21 strikes each side: 5 ITM + ATM + 15 OTM)
+    ce_options = []
+    pe_options = []
 
     for strike_data in chain_data:
         strike = strike_data['strike_price']
 
-        # CE: ATM to OTM15 (ATM + 15 strikes above)
-        if atm_strike <= strike <= atm_strike + (15 * step):
+        # CE: ITM5 to OTM15 (ATM - 5 strikes below to ATM + 15 strikes above)
+        # For CE, ITM is below ATM (lower strikes are in-the-money)
+        if atm_strike - (5 * step) <= strike <= atm_strike + (15 * step):
             ce_option = strike_data.get('call_options', {})
             if ce_option and ce_option.get('market_data'):
-                atm_to_otm15_ce.append({
+                ce_options.append({
                     'symbol': symbol,
                     'expiry': expiry_date,
                     'strike': strike,
@@ -103,11 +104,12 @@ def fetch_live_option_chain(access_token, symbol='NIFTY', expiry_date='2025-11-2
                     'vega': ce_option.get('option_greeks', {}).get('vega', 0),
                 })
 
-        # PE: ATM to OTM15 (ATM - 15 strikes below)
-        if atm_strike - (15 * step) <= strike <= atm_strike:
+        # PE: ITM5 to OTM15 (ATM - 15 strikes below to ATM + 5 strikes above)
+        # For PE, ITM is above ATM (higher strikes are in-the-money)
+        if atm_strike - (15 * step) <= strike <= atm_strike + (5 * step):
             pe_option = strike_data.get('put_options', {})
             if pe_option and pe_option.get('market_data'):
-                atm_to_otm15_pe.append({
+                pe_options.append({
                     'symbol': symbol,
                     'expiry': expiry_date,
                     'strike': strike,
@@ -126,10 +128,10 @@ def fetch_live_option_chain(access_token, symbol='NIFTY', expiry_date='2025-11-2
                 })
 
     # Combine CE and PE
-    all_options = atm_to_otm15_ce + atm_to_otm15_pe
+    all_options = ce_options + pe_options
 
-    print(f"\n✅ Fetched {len(atm_to_otm15_ce)} CE options (ATM to OTM15)")
-    print(f"✅ Fetched {len(atm_to_otm15_pe)} PE options (ATM to OTM15)")
+    print(f"\n✅ Fetched {len(ce_options)} CE options (ITM5 to OTM15)")
+    print(f"✅ Fetched {len(pe_options)} PE options (ITM5 to OTM15)")
     print(f"✅ Total: {len(all_options)} options")
 
     return all_options, spot_price

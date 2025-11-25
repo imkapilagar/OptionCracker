@@ -1,0 +1,78 @@
+[
+  {
+    "timeframe": "09:30-10:30",
+    "start_time": "09:30",
+    "end_time": "10:30",
+    "ce_strike": {
+      "strike": 26200,
+      "low": 48.75,
+      "ltp": 52.3,
+      "distance": 1.25,
+      "samples": 120
+    },
+    "pe_strike": {
+      "strike": 26050,
+      "low": 51.2,
+      "ltp": 58.4,
+      "distance": 1.2,
+      "samples": 120
+    }
+  },
+  {
+    "timeframe": "10:00-11:00",
+    "start_time": "10:00",
+    "end_time": "11:00",
+    "ce_strike": {
+      "strike": 26150,
+      "low": 47.9,
+      "ltp": 49.6,
+      "distance": 2.1,
+      "samples": 120
+    },
+    "pe_strike": {
+      "strike": 26100,
+      "low": 52.4,
+      "ltp": 61.75,
+      "distance": 2.4,
+      "samples": 120
+    }
+  },
+  {
+    "timeframe": "10:30-11:30",
+    "start_time": "10:30",
+    "end_time": "11:30",
+    "ce_strike": {
+      "strike": 26150,
+      "low": 45.5,
+      "ltp": 47.45,
+      "distance": 4.5,
+      "samples": 120
+    },
+    "pe_strike": {
+      "strike": 26100,
+      "low": 53.9,
+      "ltp": 74.25,
+      "distance": 3.9,
+      "samples": 120
+    }
+  },
+  {
+    "timeframe": "11:00-12:00",
+    "start_time": "11:00",
+    "end_time": "12:00",
+    "ce_strike": {
+      "strike": 26100,
+      "low": 46.2,
+      "ltp": 50.85,
+      "distance": 3.8,
+      "samples": 120
+    },
+    "pe_strike": {
+      "strike": 26050,
+      "low": 48.6,
+      "ltp": 67.3,
+      "distance": 1.4,
+      "samples": 120
+    }
+  }
+]
