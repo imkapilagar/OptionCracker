@@ -5,22 +5,22 @@
     "end_time": "10:30",
     "status": "active",
     "samples": 209,
-    "last_update": "10:21:25",
+    "last_update": "10:52:31",
     "ce_strike": {
       "strike": 26000,
-      "low": 60.2,
-      "ltp": 67.5,
-      "distance": 10.200000000000003,
-      "samples": 19,
-      "last_update": "10:21:25"
+      "low": 38.25,
+      "ltp": 42.25,
+      "distance": 11.75,
+      "samples": 55,
+      "last_update": "10:52:31"
     },
     "pe_strike": {
       "strike": 26050,
-      "low": 61.6,
-      "ltp": 61.6,
-      "distance": 11.600000000000001,
-      "samples": 19,
-      "last_update": "10:21:25"
+      "low": 61.15,
+      "ltp": 81.25,
+      "distance": 11.149999999999999,
+      "samples": 55,
+      "last_update": "10:52:31"
     }
   }
 }

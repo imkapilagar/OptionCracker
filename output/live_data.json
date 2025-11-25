@@ -1,0 +1,24 @@
+{
+  "thread_1": {
+    "timeframe": "09:30-10:30",
+    "start_time": "09:30",
+    "end_time": "10:30",
+    "status": "active",
+    "samples": 1,
+    "last_update": "09:53:24",
+    "ce_strike": {
+      "strike": 25950,
+      "low": 60.7,
+      "ltp": 60.7,
+      "distance": 10.700000000000003,
+      "samples": 1
+    },
+    "pe_strike": {
+      "strike": 25950,
+      "low": 41.9,
+      "ltp": 41.9,
+      "distance": 8.100000000000001,
+      "samples": 1
+    }
+  }
+}
