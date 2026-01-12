@@ -1,0 +1,74 @@
+# Options Breakout Tracker V2 - Configuration
+# ============================================
+
+# Market timing (IST)
+timing:
+  lookback_start: "10:00"
+  lookback_end: "11:00"
+  entry_time: "11:00"
+  market_close: "15:30"
+  lookback_duration_minutes: 60
+
+# Symbol configurations
+symbols:
+  NIFTY:
+    enabled: true
+    index_key: "NSE_INDEX|Nifty 50"
+    option_prefix: "NSE_FO|NIFTY"
+    exchange: "NSE_FO"
+    target_premium: 60
+    stop_loss_percent: 50
+    strike_step: 50
+    strikes_range: 10
+
+  SENSEX:
+    enabled: true
+    index_key: "BSE_INDEX|SENSEX"
+    option_prefix: "BSE_FO|SENSEX"
+    exchange: "BSE_FO"
+    target_premium: 200
+    stop_loss_percent: 50
+    strike_step: 100
+    strikes_range: 10
+
+  BANKNIFTY:
+    enabled: true
+    index_key: "NSE_INDEX|Nifty Bank"
+    option_prefix: "NSE_FO|BANKNIFTY"
+    exchange: "NSE_FO"
+    target_premium: 150
+    stop_loss_percent: 50
+    strike_step: 100
+    strikes_range: 10
+
+# WebSocket configuration
+websocket:
+  subscription_mode: "full"
+  auto_reconnect: true
+  reconnect_interval_seconds: 5
+  max_reconnect_attempts: 10
+
+# Dashboard configuration
+dashboard:
+  enabled: true
+  host: "localhost"
+  port: 8765
+  update_throttle_ms: 100
+
+# Alerts configuration
+alerts:
+  desktop_notifications: true
+  sound_enabled: true
+  console_logging: true
+
+# Persistence configuration
+persistence:
+  save_interval_seconds: 30
+  output_directory: "output"
+  file_prefix: "breakout_v2"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  file: "logs/breakout_v2.log"
+  console: true
