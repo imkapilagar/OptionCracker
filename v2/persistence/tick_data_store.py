@@ -50,6 +50,10 @@ class TickDataStore:
         self._file_handle = None
         self._filepath: Optional[Path] = None
 
+        # Track data time range in memory
+        self._first_tick_time: Optional[str] = None
+        self._last_tick_time: Optional[str] = None
+
         # Ensure output directory exists
         self.output_dir.mkdir(exist_ok=True)
 
@@ -106,8 +110,9 @@ class TickDataStore:
             volume: Optional volume
             oi: Optional open interest
         """
+        time_str = timestamp.strftime("%H:%M:%S.%f")[:12]  # HH:MM:SS.mmm
         tick = {
-            "t": timestamp.strftime("%H:%M:%S.%f")[:12],  # HH:MM:SS.mmm
+            "t": time_str,
             "i": instrument_key,
             "p": ltp
         }
@@ -121,6 +126,12 @@ class TickDataStore:
         with self._lock:
             self._buffer.append(tick)
             self._tick_count += 1
+
+            # Track time range
+            time_short = time_str[:5]  # HH:MM
+            if self._first_tick_time is None:
+                self._first_tick_time = time_short
+            self._last_tick_time = time_short
 
             # Flush buffer if full
             if len(self._buffer) >= self.buffer_size:
@@ -172,41 +183,12 @@ class TickDataStore:
         return self._tick_count
 
     def get_data_range(self) -> Dict[str, Any]:
-        """Get the time range of data in the current file."""
-        if not self._filepath or not self._filepath.exists():
-            return {'start_time': None, 'end_time': None, 'tick_count': 0}
-
-        try:
-            start_time = None
-            end_time = None
-
-            with open(self._filepath, 'r', encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        data = json.loads(line.strip())
-                        if data.get("type") == "header":
-                            continue
-                        if data.get("type") == "footer":
-                            continue
-
-                        tick_time = data.get('t', '')
-                        if tick_time:
-                            # Format: HH:MM:SS.mmm - extract HH:MM
-                            time_short = tick_time[:5]
-                            if start_time is None:
-                                start_time = time_short
-                            end_time = time_short
-                    except json.JSONDecodeError:
-                        continue
-
-            return {
-                'start_time': start_time,
-                'end_time': end_time,
-                'tick_count': self._tick_count
-            }
-        except Exception as e:
-            print(f"[TickDataStore] Error getting data range: {e}")
-            return {'start_time': None, 'end_time': None, 'tick_count': self._tick_count}
+        """Get the time range of data (from memory for fast access)."""
+        return {
+            'start_time': self._first_tick_time,
+            'end_time': self._last_tick_time,
+            'tick_count': self._tick_count
+        }
 
     @staticmethod
     def load_ticks(filepath: str) -> List[Dict[str, Any]]:
