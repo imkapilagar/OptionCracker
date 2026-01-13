@@ -338,6 +338,9 @@ class BreakoutTracker:
         """
         Check if phase should transition based on current time.
         Should be called periodically.
+
+        Handles late starts: if started after entry_time, stays in LOOKBACK
+        to collect some data before generating signals.
         """
         now = datetime.now().time()
 
@@ -345,19 +348,44 @@ class BreakoutTracker:
             old_phase = self._phase
 
             if self._phase == TrackerPhase.WAITING:
-                if now >= self.lookback_start:
+                # Always start with lookback if market is open
+                if now >= self.lookback_start and now < self.market_close:
                     self._phase = TrackerPhase.LOOKBACK
-                    print(f"\n{'='*60}")
-                    print(f"PHASE: LOOKBACK STARTED at {now}")
-                    print(f"Tracking lows until {self.entry_time}")
-                    print(f"{'='*60}\n")
+
+                    if now >= self.entry_time:
+                        print(f"\n{'='*60}")
+                        print(f"PHASE: LOOKBACK (LATE START) at {now}")
+                        print(f"Started after entry time - tracking lows for 2 minutes")
+                        print(f"{'='*60}\n")
+                        # Mark that we need delayed entry signal generation
+                        self._late_start = True
+                        self._late_start_time = datetime.now()
+                    else:
+                        print(f"\n{'='*60}")
+                        print(f"PHASE: LOOKBACK STARTED at {now}")
+                        print(f"Tracking lows until {self.entry_time}")
+                        print(f"{'='*60}\n")
+                        self._late_start = False
 
             elif self._phase == TrackerPhase.LOOKBACK:
-                if now >= self.entry_time:
-                    self._phase = TrackerPhase.ENTRY_SIGNAL
+                should_generate_signals = False
+
+                if hasattr(self, '_late_start') and self._late_start:
+                    # For late starts, wait 30 seconds to collect data
+                    elapsed = (datetime.now() - self._late_start_time).total_seconds()
+                    if elapsed >= 30:  # 30 seconds
+                        should_generate_signals = True
+                        print(f"\n{'='*60}")
+                        print(f"PHASE: ENTRY TIME (LATE START) - {elapsed:.0f}s of data collected")
+                        print(f"{'='*60}\n")
+                elif now >= self.entry_time:
+                    should_generate_signals = True
                     print(f"\n{'='*60}")
                     print(f"PHASE: ENTRY TIME at {now}")
                     print(f"{'='*60}\n")
+
+                if should_generate_signals:
+                    self._phase = TrackerPhase.ENTRY_SIGNAL
 
                     # Generate entry signals
                     if not self._entry_signals_generated:

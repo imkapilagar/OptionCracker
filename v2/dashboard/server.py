@@ -60,6 +60,30 @@ class DashboardServer:
         self._site: Optional[web.TCPSite] = None
         self._is_running = False
 
+        # Callbacks for various actions
+        self._settings_callback: Optional[callable] = None
+        self._create_strategy_callback: Optional[callable] = None
+        self._update_strategy_callback: Optional[callable] = None
+        self._remove_strategy_callback: Optional[callable] = None
+        self._get_preview_callback: Optional[callable] = None
+
+    def set_settings_callback(self, callback: callable) -> None:
+        """Set callback for settings updates from dashboard."""
+        self._settings_callback = callback
+
+    def set_strategy_callbacks(
+        self,
+        create_callback: callable = None,
+        update_callback: callable = None,
+        remove_callback: callable = None,
+        preview_callback: callable = None
+    ) -> None:
+        """Set callbacks for strategy CRUD operations."""
+        self._create_strategy_callback = create_callback
+        self._update_strategy_callback = update_callback
+        self._remove_strategy_callback = remove_callback
+        self._get_preview_callback = preview_callback
+
     async def start(self) -> None:
         """Start the dashboard server."""
         self._app = web.Application()
@@ -151,9 +175,17 @@ class DashboardServer:
         try:
             async for msg in ws:
                 if msg.type == web.WSMsgType.TEXT:
-                    # Handle client messages (e.g., ping)
+                    # Handle client messages
                     if msg.data == 'ping':
                         await ws.send_str('pong')
+                    else:
+                        # Try to parse as JSON action
+                        try:
+                            data = json.loads(msg.data)
+                            response = await self._handle_client_action(data)
+                            await ws.send_str(json.dumps(response))
+                        except json.JSONDecodeError:
+                            pass
                 elif msg.type == web.WSMsgType.ERROR:
                     print(f"WebSocket error: {ws.exception()}")
         finally:
@@ -161,6 +193,65 @@ class DashboardServer:
             print(f"Dashboard client disconnected. Total clients: {len(self._clients)}")
 
         return ws
+
+    async def _handle_client_action(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle incoming client actions.
+
+        Actions:
+        - update_settings: Update global settings
+        - create_strategy: Create a new strategy
+        - update_strategy: Update an existing strategy
+        - remove_strategy: Remove a strategy
+        """
+        action = data.get('action')
+
+        try:
+            if action == 'update_settings':
+                print(f"[Server] Settings update: {data}")
+                if self._settings_callback:
+                    self._settings_callback(data)
+                return {'status': 'ok', 'message': 'Settings updated'}
+
+            elif action == 'create_strategy':
+                print(f"[Server] Create strategy: {data}")
+                if self._create_strategy_callback:
+                    result = self._create_strategy_callback(data)
+                    return {'status': 'ok', 'strategy_id': result.id if result else None}
+                return {'status': 'error', 'message': 'No handler configured'}
+
+            elif action == 'update_strategy':
+                print(f"[Server] Update strategy: {data}")
+                if self._update_strategy_callback:
+                    success = self._update_strategy_callback(data)
+                    if success:
+                        return {'status': 'ok', 'message': 'Strategy updated'}
+                    return {'status': 'error', 'message': 'Cannot update strategy (already in monitoring)'}
+                return {'status': 'error', 'message': 'No handler configured'}
+
+            elif action == 'remove_strategy':
+                print(f"[Server] Remove strategy: {data}")
+                if self._remove_strategy_callback:
+                    strategy_id = data.get('strategy_id')
+                    success = self._remove_strategy_callback(strategy_id)
+                    if success:
+                        return {'status': 'ok', 'message': 'Strategy removed'}
+                    return {'status': 'error', 'message': 'Strategy not found'}
+                return {'status': 'error', 'message': 'No handler configured'}
+
+            elif action == 'get_preview':
+                # Get historical data preview for strategy builder
+                if self._get_preview_callback:
+                    preview_data = self._get_preview_callback(data)
+                    return {'status': 'ok', 'action': 'preview_data', 'data': preview_data}
+                return {'status': 'error', 'message': 'No handler configured'}
+
+            else:
+                return {'status': 'error', 'message': f'Unknown action: {action}'}
+
+        except Exception as e:
+            print(f"[Server] Error handling action {action}: {e}")
+            return {'status': 'error', 'message': str(e)}
 
     async def _handle_index(self, request: web.Request) -> web.FileResponse:
         """Serve the dashboard HTML."""
@@ -204,6 +295,32 @@ class DashboardServerSync:
         self._server: Optional[DashboardServer] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[Any] = None
+        self._settings_callback: Optional[callable] = None
+        self._create_strategy_callback: Optional[callable] = None
+        self._update_strategy_callback: Optional[callable] = None
+        self._remove_strategy_callback: Optional[callable] = None
+        self._get_preview_callback: Optional[callable] = None
+
+    def set_settings_callback(self, callback: callable) -> None:
+        """Set callback for settings updates from dashboard."""
+        self._settings_callback = callback
+        if self._server:
+            self._server.set_settings_callback(callback)
+
+    def set_strategy_callbacks(
+        self,
+        create_callback: callable = None,
+        update_callback: callable = None,
+        remove_callback: callable = None,
+        preview_callback: callable = None
+    ) -> None:
+        """Set callbacks for strategy CRUD operations."""
+        self._create_strategy_callback = create_callback
+        self._update_strategy_callback = update_callback
+        self._remove_strategy_callback = remove_callback
+        self._get_preview_callback = preview_callback
+        if self._server:
+            self._server.set_strategy_callbacks(create_callback, update_callback, remove_callback, preview_callback)
 
     def start(self) -> None:
         """Start the server in a background thread."""
@@ -218,6 +335,17 @@ class DashboardServerSync:
                 self.port,
                 self.update_throttle_ms
             )
+
+            # Set callbacks if configured
+            if self._settings_callback:
+                self._server.set_settings_callback(self._settings_callback)
+            if self._create_strategy_callback or self._update_strategy_callback or self._remove_strategy_callback or self._get_preview_callback:
+                self._server.set_strategy_callbacks(
+                    self._create_strategy_callback,
+                    self._update_strategy_callback,
+                    self._remove_strategy_callback,
+                    self._get_preview_callback
+                )
 
             self._loop.run_until_complete(self._server.start())
             self._loop.run_forever()

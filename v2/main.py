@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Options Breakout Tracker V2
-Real-time WebSocket-based tracking for options breakout strategy
+Options Breakout Tracker V2 - Multi-Strategy Edition
+Real-time WebSocket-based tracking for options breakout strategies
 
 Usage:
     python main.py [--config CONFIG_PATH]
@@ -10,7 +10,6 @@ import sys
 import time
 import signal
 import argparse
-import threading
 import webbrowser
 from pathlib import Path
 from datetime import datetime
@@ -21,14 +20,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from v2.config.settings import Settings
 from v2.core.instrument_builder import InstrumentBuilder
 from v2.core.websocket_manager import WebSocketManager, TickData, ConnectionStatus
-from v2.core.breakout_tracker import BreakoutTracker, TrackerPhase, Position
-from v2.alerts.notifier import Notifier, create_notifier_from_config
+from v2.core.strategy_manager import StrategyManager
+from v2.core.strategy import Strategy
+from v2.alerts.notifier import create_notifier_from_config
 from v2.persistence.state_manager import StateManager
+from v2.persistence.tick_data_store import TickDataStore
+from v2.persistence.strategy_store import StrategyStore
 from v2.dashboard.server import DashboardServerSync
 
 
 class BreakoutApp:
-    """Main application orchestrator"""
+    """Main application orchestrator for multi-strategy tracking"""
 
     def __init__(self, config_path: str = None):
         """
@@ -39,14 +41,13 @@ class BreakoutApp:
         """
         print("\n" + "=" * 70)
         print("OPTIONS BREAKOUT TRACKER V2")
-        print("Real-time WebSocket Edition")
+        print("Multi-Strategy Edition")
         print("=" * 70 + "\n")
 
         # Load configuration
         print("Loading configuration...")
         self.settings = Settings.load(config_path) if config_path else Settings.load_default()
-        print(f"  Entry Time: {self.settings.timing.entry_time}")
-        print(f"  Lookback: {self.settings.timing.lookback_start} - {self.settings.timing.lookback_end}")
+        print(f"  Market Close: {self.settings.timing.market_close}")
 
         # Load credentials
         print("\nLoading credentials...")
@@ -61,12 +62,25 @@ class BreakoutApp:
             self.settings.persistence.file_prefix
         )
 
+        # Tick data store for saving raw tick data
+        self.tick_store = TickDataStore(
+            output_dir=self.settings.persistence.output_directory,
+            file_prefix="tick_data",
+            buffer_size=50
+        )
+
+        # Strategy store for persistence
+        self.strategy_store = StrategyStore(
+            output_dir=self.settings.persistence.output_directory
+        )
+
         # Core components (initialized later)
         self.ws_manager = None
-        self.tracker = None
+        self.strategy_manager = None
         self.dashboard_server = None
         self.all_instruments = []
         self.symbol_metadata = {}
+        self.index_instruments = {}  # index -> {instrument_key: {strike, option_type}}
 
         # Control flags
         self._shutdown = False
@@ -91,19 +105,6 @@ class BreakoutApp:
 
     def initialize(self) -> None:
         """Initialize all components"""
-        # Check for session resume
-        if self.state_manager.can_resume():
-            resume_info = self.state_manager.get_resume_info()
-            print(f"\nResumable session found:")
-            print(f"  Phase: {resume_info['phase']}")
-            print(f"  Ticks: {resume_info['tick_count']}")
-            print(f"  Last save: {resume_info['last_save']}")
-
-            response = input("\nResume previous session? (y/n): ").strip().lower()
-            if response == 'y':
-                print("\nSession resume not yet implemented. Starting fresh.")
-                # TODO: Implement session resume
-
         # Archive old sessions
         archived = self.state_manager.archive_old_sessions()
         if archived > 0:
@@ -120,28 +121,41 @@ class BreakoutApp:
 
         print(f"\nTotal instruments: {len(self.all_instruments)}")
 
-        # Initialize tracker
-        print("\nInitializing breakout tracker...")
-        self.tracker = BreakoutTracker(
-            lookback_start=self.settings.timing.lookback_start,
-            lookback_end=self.settings.timing.lookback_end,
-            entry_time=self.settings.timing.entry_time,
-            market_close=self.settings.timing.market_close,
-            on_signal=self._on_signal,
+        # Build index_instruments mapping for strategy manager
+        for symbol, metadata in self.symbol_metadata.items():
+            strike_map = metadata.get('strike_map', {})
+            instruments = {}
+
+            for opt_type in ['CE', 'PE']:
+                for strike, inst_key in strike_map.get(opt_type, {}).items():
+                    instruments[inst_key] = {
+                        'strike': strike,
+                        'option_type': opt_type
+                    }
+
+            self.index_instruments[symbol] = instruments
+            print(f"  {symbol}: {len(instruments)} instruments")
+
+        # Initialize strategy manager with tick data filepath
+        print("\nInitializing strategy manager...")
+        tick_filepath = str(self.tick_store.output_dir / f"tick_data_{datetime.now().strftime('%Y%m%d')}.json")
+        self.strategy_manager = StrategyManager(
+            market_close=self.settings.timing.market_close.strftime('%H:%M'),
+            on_entry_signal=self._on_entry_signal,
             on_sl_hit=self._on_sl_hit,
             on_phase_change=self._on_phase_change,
-            on_new_low=self._on_new_low
+            tick_data_filepath=tick_filepath
         )
 
-        # Add symbols to tracker
-        for symbol, config in enabled_symbols.items():
-            if symbol in self.symbol_metadata:
-                self.tracker.add_symbol(
-                    symbol=symbol,
-                    target_premium=config.target_premium,
-                    stop_loss_percent=config.stop_loss_percent,
-                    metadata=self.symbol_metadata[symbol]
-                )
+        # Set index instruments for strategy manager
+        for index, instruments in self.index_instruments.items():
+            self.strategy_manager.set_index_instruments(index, instruments)
+
+        # Load saved strategies
+        saved_strategies = self.strategy_store.load()
+        if saved_strategies:
+            loaded = self.strategy_manager.load_strategies(saved_strategies)
+            print(f"  Loaded {loaded} saved strategies")
 
         # Initialize WebSocket manager
         print("\nInitializing WebSocket manager...")
@@ -163,6 +177,15 @@ class BreakoutApp:
                 port=self.settings.dashboard.port,
                 update_throttle_ms=self.settings.dashboard.update_throttle_ms
             )
+
+            # Set strategy callbacks
+            self.dashboard_server.set_strategy_callbacks(
+                create_callback=self._on_create_strategy,
+                update_callback=self._on_update_strategy,
+                remove_callback=self._on_remove_strategy,
+                preview_callback=self._on_get_preview
+            )
+
             self.dashboard_server.start()
             print(f"  Dashboard: {self.dashboard_server.url}")
 
@@ -171,6 +194,11 @@ class BreakoutApp:
         print("\n" + "=" * 70)
         print("STARTING TRACKER")
         print("=" * 70)
+
+        # Start tick data recording
+        print("\nStarting tick data recording...")
+        tick_file = self.tick_store.start()
+        print(f"  Tick data file: {tick_file}")
 
         # Connect WebSocket and subscribe
         print("\nConnecting to Upstox WebSocket...")
@@ -188,9 +216,9 @@ class BreakoutApp:
             webbrowser.open(self.dashboard_server.url)
 
         print("\n" + "=" * 70)
-        print("TRACKER RUNNING")
+        print("TRACKER RUNNING - MULTI-STRATEGY MODE")
         print(f"Current time: {datetime.now().strftime('%H:%M:%S')}")
-        print(f"Entry time: {self.settings.timing.entry_time}")
+        print("Create strategies via the dashboard")
         print("Press Ctrl+C to stop")
         print("=" * 70 + "\n")
 
@@ -204,23 +232,29 @@ class BreakoutApp:
 
         try:
             while not self._shutdown:
-                # Check phase transitions
-                self.tracker.check_phase_transition()
+                # Check phase transitions for all strategies
+                self.strategy_manager.check_phase_transitions()
 
                 # Broadcast to dashboard
                 if self.dashboard_server:
-                    state = self.tracker.get_state()
+                    state = self.strategy_manager.get_state()
+                    # Add data range info
+                    data_range = self.tick_store.get_data_range()
+                    state['data_range'] = {
+                        'start': data_range.get('start_time'),
+                        'end': data_range.get('end_time')
+                    }
                     self.dashboard_server.broadcast(state)
 
                 # Periodic state save
                 if time.time() - last_save >= save_interval:
-                    self.state_manager.save_state(self.tracker.get_state())
-                    last_save = time.time()
+                    # Save strategies
+                    strategies_data = self.strategy_manager.save_strategies()
+                    self.strategy_store.save(strategies_data)
 
-                # Check if completed
-                if self.tracker.phase == TrackerPhase.COMPLETED:
-                    print("\nTrading day completed.")
-                    break
+                    # Save general state
+                    self.state_manager.save_state(self.strategy_manager.get_state())
+                    last_save = time.time()
 
                 time.sleep(self._phase_check_interval)
 
@@ -238,13 +272,22 @@ class BreakoutApp:
         self._shutdown = True
 
         # Save final state
-        if self.tracker:
-            print("\nSaving final state...")
-            state = self.tracker.get_state()
+        if self.strategy_manager:
+            print("\nSaving strategies...")
+            strategies_data = self.strategy_manager.save_strategies()
+            self.strategy_store.save(strategies_data)
+            print(f"  Saved {len(strategies_data)} strategies")
+
+            state = self.strategy_manager.get_state()
             state['shutdown_time'] = datetime.now().isoformat()
-            state['shutdown_reason'] = 'user_requested'
             self.state_manager.save_state(state)
-            print(f"  Saved to: {self.state_manager.get_state_file_path()}")
+
+        # Stop tick data recording
+        if self.tick_store:
+            print("\nStopping tick data recording...")
+            tick_summary = self.tick_store.stop()
+            print(f"  Tick data saved: {tick_summary.get('filepath')}")
+            print(f"  Total ticks recorded: {tick_summary.get('total_ticks')}")
 
         # Disconnect WebSocket
         if self.ws_manager:
@@ -257,51 +300,58 @@ class BreakoutApp:
             self.dashboard_server.stop()
 
         # Print summary
-        if self.tracker:
-            stats = self.tracker.get_stats()
+        if self.strategy_manager:
+            stats = self.strategy_manager.get_stats()
             print(f"\nSession Summary:")
             print(f"  Total ticks: {stats['tick_count']}")
-            print(f"  Positions: {stats['positions_count']}")
-            print(f"  Final phase: {stats['phase']}")
+            print(f"  Strategies: {stats['strategies_count']}")
 
         print("\nShutdown complete.")
 
     def _on_tick(self, tick: TickData) -> None:
         """Handle incoming tick data"""
-        self.tracker.on_tick(
+        # Record tick to persistent storage
+        self.tick_store.record_tick(
+            instrument_key=tick.instrument_key,
+            ltp=tick.ltp,
+            timestamp=tick.timestamp,
+            volume=tick.volume
+        )
+
+        # Pass to strategy manager for processing
+        self.strategy_manager.on_tick(
             instrument_key=tick.instrument_key,
             ltp=tick.ltp,
             timestamp=tick.timestamp
         )
 
-    def _on_signal(self, position: Position) -> None:
-        """Handle entry signal"""
-        self.notifier.send_entry_signal(
-            symbol=position.symbol,
-            option_type=position.option_type,
-            strike=position.strike,
-            entry_price=position.entry_price,
-            stop_loss=position.stop_loss
-        )
+    def _on_entry_signal(self, strategy: Strategy, option_type: str) -> None:
+        """Handle entry signal from strategy"""
+        position = strategy.ce_position if option_type == 'CE' else strategy.pe_position
+        if position:
+            self.notifier.send_entry_signal(
+                symbol=strategy.index,
+                option_type=option_type,
+                strike=position.strike,
+                entry_price=position.entry_price,
+                stop_loss=position.stop_loss
+            )
 
-    def _on_sl_hit(self, position: Position) -> None:
+    def _on_sl_hit(self, strategy: Strategy, option_type: str) -> None:
         """Handle stop loss hit"""
-        self.notifier.send_stop_loss_hit(
-            symbol=position.symbol,
-            option_type=position.option_type,
-            strike=position.strike,
-            sl_price=position.current_ltp,
-            entry_price=position.entry_price
-        )
+        position = strategy.ce_position if option_type == 'CE' else strategy.pe_position
+        if position:
+            self.notifier.send_stop_loss_hit(
+                symbol=strategy.index,
+                option_type=option_type,
+                strike=position.strike,
+                sl_price=position.current_ltp,
+                entry_price=position.entry_price
+            )
 
-    def _on_phase_change(self, old_phase: TrackerPhase, new_phase: TrackerPhase) -> None:
+    def _on_phase_change(self, strategy: Strategy, old_phase: str, new_phase: str) -> None:
         """Handle phase change"""
-        self.notifier.send_phase_change(old_phase.value, new_phase.value)
-
-    def _on_new_low(self, strike_data) -> None:
-        """Handle new low detection (optional logging)"""
-        # Can be used for verbose logging during lookback
-        pass
+        self.notifier.send_phase_change(old_phase, new_phase)
 
     def _on_ws_status(self, status: ConnectionStatus, message: str) -> None:
         """Handle WebSocket status changes"""
@@ -312,11 +362,90 @@ class BreakoutApp:
         elif status == ConnectionStatus.ERROR:
             self.notifier.send_warning("WebSocket Error", message)
 
+    # Strategy CRUD callbacks from dashboard
+    def _on_create_strategy(self, data: dict) -> Strategy:
+        """Handle create strategy request from dashboard"""
+        print(f"\n[CREATE STRATEGY] {data}")
+
+        strategy = self.strategy_manager.add_strategy(
+            index=data.get('index', 'NIFTY'),
+            entry_time=data.get('entry_time', '11:00'),
+            lookback_minutes=data.get('lookback_minutes', 60),
+            target_premium=data.get('target_premium', 60.0),
+            stop_loss_percent=data.get('stop_loss_percent', 50.0)
+        )
+
+        # Save immediately
+        strategies_data = self.strategy_manager.save_strategies()
+        self.strategy_store.save(strategies_data)
+
+        return strategy
+
+    def _on_update_strategy(self, data: dict) -> bool:
+        """Handle update strategy request from dashboard"""
+        print(f"\n[UPDATE STRATEGY] {data}")
+
+        strategy_id = data.get('strategy_id')
+        if not strategy_id:
+            return False
+
+        success = self.strategy_manager.update_strategy(
+            strategy_id=strategy_id,
+            entry_time=data.get('entry_time'),
+            lookback_minutes=data.get('lookback_minutes'),
+            target_premium=data.get('target_premium'),
+            stop_loss_percent=data.get('stop_loss_percent')
+        )
+
+        if success:
+            # Save immediately
+            strategies_data = self.strategy_manager.save_strategies()
+            self.strategy_store.save(strategies_data)
+
+        return success
+
+    def _on_remove_strategy(self, strategy_id: str) -> bool:
+        """Handle remove strategy request from dashboard"""
+        print(f"\n[REMOVE STRATEGY] {strategy_id}")
+
+        success = self.strategy_manager.remove_strategy(strategy_id)
+
+        if success:
+            # Save immediately
+            strategies_data = self.strategy_manager.save_strategies()
+            self.strategy_store.save(strategies_data)
+
+        return success
+
+    def _on_get_preview(self, data: dict) -> dict:
+        """Handle get preview request from dashboard - returns historical data for lookback period"""
+        index = data.get('index', 'NIFTY')
+        entry_time = data.get('entry_time', '11:00')
+        lookback_minutes = data.get('lookback_minutes', 60)
+        target_premium = data.get('target_premium', 60.0)
+
+        # Calculate lookback_start from entry_time - lookback_minutes
+        parts = entry_time.split(':')
+        entry_minutes = int(parts[0]) * 60 + int(parts[1])
+        start_minutes = entry_minutes - lookback_minutes
+        start_hour = start_minutes // 60
+        start_min = start_minutes % 60
+        lookback_start = f"{start_hour:02d}:{start_min:02d}"
+
+        print(f"\n[GET PREVIEW] {index} | {lookback_start}-{entry_time} | Target: Rs.{target_premium}")
+
+        return self.strategy_manager.get_preview_data(
+            index=index,
+            target_premium=target_premium,
+            lookback_start=lookback_start,
+            entry_time=entry_time
+        )
+
 
 def main():
     """Entry point"""
     parser = argparse.ArgumentParser(
-        description='Options Breakout Tracker V2 - Real-time WebSocket Edition'
+        description='Options Breakout Tracker V2 - Multi-Strategy Edition'
     )
     parser.add_argument(
         '--config', '-c',
@@ -335,7 +464,7 @@ def main():
         print("Test mode - Loading configuration...")
         settings = Settings.load(args.config) if args.config else Settings.load_default()
         print(f"\nConfiguration loaded successfully:")
-        print(f"  Entry Time: {settings.timing.entry_time}")
+        print(f"  Market Close: {settings.timing.market_close}")
         print(f"  Symbols: {list(settings.get_enabled_symbols().keys())}")
         print(f"  Dashboard Port: {settings.dashboard.port}")
         return

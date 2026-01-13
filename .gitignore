@@ -1,4 +1,4 @@
-# Zerodha API Credentials - NEVER commit these!
+# Credentials - NEVER commit these!
 config.py
 zerodha_credentials.txt
 upstox_credentials.txt
@@ -8,13 +8,16 @@ upstox_credentials.txt
 # API Keys and Secrets
 .env
 .env.local
+.env.production
 
-# Output files - keep HTML but ignore CSV
-*.csv
+# Output files - data files can be large
+output/*.json
 output/*.csv
+output/*.gz
+!output/.gitkeep
+
+# Keep HTML dashboards
 !output/*.html
-!index.html
-data/
 
 # Python
 __pycache__/
@@ -25,6 +28,7 @@ __pycache__/
 venv/
 env/
 ENV/
+.venv/
 
 # IDE
 .vscode/
@@ -40,3 +44,10 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Archives
+archives/

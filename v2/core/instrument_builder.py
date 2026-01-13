@@ -151,10 +151,12 @@ class InstrumentBuilder:
         """
         Build complete list of instrument keys for a symbol.
 
+        Fetches actual instrument keys from option chain API (numeric codes like NSE_FO|46051).
+
         Args:
             symbol: Symbol name (NIFTY, SENSEX, BANKNIFTY)
             index_key: Index instrument key
-            option_prefix: Option prefix for instrument keys
+            option_prefix: Option prefix for instrument keys (unused, kept for compatibility)
             strike_step: Strike step size
             strikes_range: Number of strikes above and below ATM
 
@@ -166,20 +168,55 @@ class InstrumentBuilder:
         atm_strike = self.get_atm_strike(spot_price, strike_step)
         expiry = self.get_nearest_expiry(index_key)
 
-        # Build strike range
-        strikes = []
-        for i in range(-strikes_range, strikes_range + 1):
-            strikes.append(atm_strike + (i * strike_step))
+        # Fetch option chain to get actual instrument keys
+        url = 'https://api.upstox.com/v2/option/chain'
+        params = {
+            'instrument_key': index_key,
+            'expiry_date': expiry
+        }
 
-        # Build instrument keys for CE and PE
+        response = requests.get(url, headers=self.headers, params=params, timeout=15)
+        response.raise_for_status()
+        chain_data = response.json().get('data', [])
+
+        if not chain_data:
+            raise ValueError(f"No option chain data for {symbol} expiry {expiry}")
+
+        # Build strike range to filter
+        min_strike = atm_strike - (strikes_range * strike_step)
+        max_strike = atm_strike + (strikes_range * strike_step)
+
+        # Extract instrument keys from option chain
         instrument_keys = []
         strike_map = {'CE': {}, 'PE': {}}
+        strikes = []
 
-        for strike in strikes:
-            for opt_type in ['CE', 'PE']:
-                key = self.format_option_key(option_prefix, expiry, strike, opt_type)
-                instrument_keys.append(key)
-                strike_map[opt_type][strike] = key
+        for entry in chain_data:
+            strike = entry.get('strike_price')
+            if strike is None:
+                continue
+
+            # Filter to our strike range
+            if strike < min_strike or strike > max_strike:
+                continue
+
+            strikes.append(strike)
+
+            # Get CE instrument key
+            ce_data = entry.get('call_options', {})
+            ce_key = ce_data.get('instrument_key')
+            if ce_key:
+                instrument_keys.append(ce_key)
+                strike_map['CE'][strike] = ce_key
+
+            # Get PE instrument key
+            pe_data = entry.get('put_options', {})
+            pe_key = pe_data.get('instrument_key')
+            if pe_key:
+                instrument_keys.append(pe_key)
+                strike_map['PE'][strike] = pe_key
+
+        strikes = sorted(set(strikes))
 
         metadata = {
             'symbol': symbol,

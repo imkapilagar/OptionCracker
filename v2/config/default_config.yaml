@@ -3,11 +3,11 @@
 
 # Market timing (IST)
 timing:
-  lookback_start: "10:00"
+  lookback_start: "09:15"
   lookback_end: "11:00"
   entry_time: "11:00"
   market_close: "15:30"
-  lookback_duration_minutes: 60
+  lookback_duration_minutes: 105
 
 # Symbol configurations
 symbols:
@@ -43,8 +43,8 @@ symbols:
 
 # WebSocket configuration
 websocket:
-  subscription_mode: "full"
-  auto_reconnect: true
+  subscription_mode: "ltpc"
+  auto_reconnect: false
   reconnect_interval_seconds: 5
   max_reconnect_attempts: 10
 
@@ -57,8 +57,8 @@ dashboard:
 
 # Alerts configuration
 alerts:
-  desktop_notifications: true
-  sound_enabled: true
+  desktop_notifications: false
+  sound_enabled: false
   console_logging: true
 
 # Persistence configuration

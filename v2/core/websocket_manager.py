@@ -274,32 +274,44 @@ class WebSocketManager:
 
     def _parse_dict_message(self, message: dict) -> None:
         """Parse dictionary format message."""
+        # Skip market_info messages (heartbeats)
+        if message.get('type') == 'market_info':
+            return
+
         feeds = message.get('feeds', {})
 
         for instrument_key, data in feeds.items():
             try:
                 # Extract LTP from various possible locations
                 ltp = None
-                ff = data.get('ff', {})
-                ltpc = ff.get('ltpc', {}) or data.get('ltpc', {})
+                ltpc = None
 
-                if ltpc:
+                # Direct ltpc (most common for ltpc mode)
+                if 'ltpc' in data:
+                    ltpc = data['ltpc']
                     ltp = ltpc.get('ltp')
 
+                # Try ff -> ltpc path (for full mode)
                 if ltp is None:
-                    # Try market_ff
-                    market_ff = ff.get('marketFF', {})
-                    ltpc = market_ff.get('ltpc', {})
+                    ff = data.get('ff', {})
+                    ltpc = ff.get('ltpc', {})
                     if ltpc:
                         ltp = ltpc.get('ltp')
+
+                    # Try market_ff path
+                    if ltp is None:
+                        market_ff = ff.get('marketFF', {})
+                        ltpc = market_ff.get('ltpc', {})
+                        if ltpc:
+                            ltp = ltpc.get('ltp')
 
                 if ltp is not None:
                     tick = TickData(
                         instrument_key=instrument_key,
                         ltp=float(ltp),
                         timestamp=datetime.now(),
-                        volume=self._safe_int(ltpc.get('v')),
-                        close=self._safe_float(ltpc.get('cp'))
+                        volume=self._safe_int(ltpc.get('ltq') if ltpc else None),
+                        close=self._safe_float(ltpc.get('cp') if ltpc else None)
                     )
                     self.on_tick(tick)
 
@@ -364,7 +376,7 @@ class WebSocketManager:
         self._update_status(ConnectionStatus.CONNECTED, "Connected to Upstox WebSocket")
         print(f"WebSocket connected. Subscribed to {len(self._subscribed_instruments)} instruments.")
 
-    def _on_close(self) -> None:
+    def _on_close(self, *args) -> None:
         """Handle WebSocket connection closed."""
         if self._is_running:
             self._update_status(ConnectionStatus.DISCONNECTED, "Connection closed unexpectedly")
@@ -381,7 +393,7 @@ class WebSocketManager:
         else:
             self._update_status(ConnectionStatus.ERROR, f"Error: {error_msg}")
 
-    def _on_reconnecting(self) -> None:
+    def _on_reconnecting(self, *args) -> None:
         """Handle reconnection attempt."""
         self._reconnect_count += 1
         self._update_status(
@@ -390,7 +402,7 @@ class WebSocketManager:
         )
         print(f"Reconnecting... attempt {self._reconnect_count}")
 
-    def _on_auto_reconnect_stopped(self) -> None:
+    def _on_auto_reconnect_stopped(self, *args) -> None:
         """Handle exhausted reconnection attempts."""
         self._update_status(
             ConnectionStatus.ERROR,
