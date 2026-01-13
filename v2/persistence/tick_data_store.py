@@ -60,6 +60,7 @@ class TickDataStore:
     def start(self, date: Optional[datetime] = None) -> Path:
         """
         Start recording ticks for the day.
+        Appends to existing file if it exists, preserving previous data.
 
         Args:
             date: Date for the file (defaults to today)
@@ -74,23 +75,59 @@ class TickDataStore:
         ext = ".json.gz" if self.compress else ".json"
         self._filepath = self.output_dir / f"{self.file_prefix}_{date_str}{ext}"
 
-        # Open file for writing
-        if self.compress:
-            self._file_handle = gzip.open(self._filepath, 'wt', encoding='utf-8')
-        else:
-            self._file_handle = open(self._filepath, 'w', encoding='utf-8')
+        # Check if file already exists (resume mode)
+        file_exists = self._filepath.exists()
 
-        # Write header
+        if file_exists:
+            # Load existing data range from file
+            self._load_existing_data_range()
+            print(f"Resuming tick data recording: {self._filepath}")
+            print(f"  Existing data: {self._first_tick_time} to {self._last_tick_time}")
+
+        # Open file for appending (or writing if new)
+        mode = 'at' if file_exists else 'wt'
+        if self.compress:
+            self._file_handle = gzip.open(self._filepath, mode, encoding='utf-8')
+        else:
+            self._file_handle = open(self._filepath, 'a' if file_exists else 'w', encoding='utf-8')
+
+        # Write header/resume marker
         header = {
-            "type": "header",
+            "type": "header" if not file_exists else "resume",
             "date": date_str,
             "start_time": datetime.now().isoformat(),
             "version": "2.0"
         }
         self._file_handle.write(json.dumps(header) + "\n")
 
-        print(f"Tick data recording started: {self._filepath}")
+        print(f"Tick data recording {'resumed' if file_exists else 'started'}: {self._filepath}")
         return self._filepath
+
+    def _load_existing_data_range(self) -> None:
+        """Load the data range from an existing tick file."""
+        if not self._filepath or not self._filepath.exists():
+            return
+
+        try:
+            opener = gzip.open if self._filepath.suffix == '.gz' else open
+            with opener(self._filepath, 'rt', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        data = json.loads(line.strip())
+                        if data.get("type") in ["header", "footer", "resume"]:
+                            continue
+
+                        tick_time = data.get('t', '')
+                        if tick_time:
+                            time_short = tick_time[:5]  # HH:MM
+                            if self._first_tick_time is None:
+                                self._first_tick_time = time_short
+                            self._last_tick_time = time_short
+                            self._tick_count += 1
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as e:
+            print(f"[TickDataStore] Error loading existing data range: {e}")
 
     def record_tick(
         self,
